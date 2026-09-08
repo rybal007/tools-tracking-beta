@@ -4,11 +4,11 @@ import './App.css'
 const STORAGE_KEY = 'tools-tracking-project'
 
 const initialTools = [
-  { id: 1, name: 'Impact Driver', category: 'Power Tools', quantity: 2, status: 'Available', location: 'Bay A1', borrower: '', calibrationDate: '2026-09-30' },
-  { id: 2, name: 'Angle Grinder', category: 'Cutting', quantity: 1, status: 'For Calibration', location: 'Mobile Cart 3', borrower: '', calibrationDate: '2026-09-01' },
-  { id: 3, name: 'Torque Wrench', category: 'Measuring', quantity: 3, status: 'Available', location: 'Tool Room', borrower: '', calibrationDate: '2026-10-15' },
-  { id: 4, name: 'Laser Level', category: 'Measuring', quantity: 1, status: 'Borrowed', location: 'Repair Bench', borrower: 'A. Gomez', calibrationDate: '2026-09-15' },
-  { id: 5, name: 'Drill Set', category: 'Power Tools', quantity: 4, status: 'Available', location: 'Bay B2', borrower: '', calibrationDate: '2026-11-05' },
+  { id: 1, name: 'Impact Driver', category: 'Power Tools', quantity: 2, status: 'Available', borrower: '', calibrationDate: '2026-09-30' },
+  { id: 2, name: 'Angle Grinder', category: 'Cutting', quantity: 1, status: 'For Calibration', borrower: '', calibrationDate: '2026-09-01' },
+  { id: 3, name: 'Torque Wrench', category: 'Measuring', quantity: 3, status: 'Available', borrower: '', calibrationDate: '2026-10-15' },
+  { id: 4, name: 'Laser Level', category: 'Measuring', quantity: 1, status: 'Borrowed', borrower: 'A. Gomez', calibrationDate: '2026-09-15' },
+  { id: 5, name: 'Drill Set', category: 'Power Tools', quantity: 4, status: 'Available', borrower: '', calibrationDate: '2026-11-05' },
 ]
 
 const statusOptions = ['All', 'Available', 'For Calibration', 'Borrowed']
@@ -18,7 +18,6 @@ const emptyForm = {
   category: 'Power Tools',
   quantity: 1,
   status: 'Available',
-  location: '',
   calibrationDate: '',
 }
 
@@ -70,7 +69,6 @@ function App() {
     name: '',
     category: 'Power Tools',
     quantity: 1,
-    location: '',
     calibrationDate: '',
   })
 
@@ -119,7 +117,6 @@ function App() {
         category: form.category,
         quantity: Number(form.quantity) || 1,
         status: nextStatus,
-        location: form.location.trim() || 'Unassigned',
         calibrationDate: form.calibrationDate || '',
         borrower: nextStatus === 'Borrowed' ? form.borrower || '' : '',
       },
@@ -221,7 +218,6 @@ function App() {
       name: tool.name,
       category: tool.category,
       quantity: tool.quantity,
-      location: tool.location,
       calibrationDate: tool.calibrationDate || '',
     })
   }
@@ -233,7 +229,6 @@ function App() {
       name: '',
       category: 'Power Tools',
       quantity: 1,
-      location: '',
       calibrationDate: '',
     })
   }
@@ -260,7 +255,6 @@ function App() {
           name: editModal.name.trim(),
           category: editModal.category,
           quantity: Number(editModal.quantity) || 1,
-          location: editModal.location.trim() || 'Unassigned',
           calibrationDate: editModal.calibrationDate || '',
           status: nextStatus,
           borrower: nextStatus === 'Borrowed' ? tool.borrower || '' : '',
@@ -278,30 +272,46 @@ function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div>
+        <div className="title-block">
+          <span className="header-pill">Live inventory</span>
           <p className="eyebrow">Operations dashboard</p>
           <h1>Tools Tracking</h1>
         </div>
-        <button type="button" className="primary-button">
-          Sync Inventory
-        </button>
+        <div className="topbar-actions">
+          <span className="mini-indicator">Updated now</span>
+          <button type="button" className="primary-button">
+            Sync Inventory
+          </button>
+        </div>
       </header>
 
       <section className="stats-grid">
         <article className="stat-card">
-          <span>Total Tools</span>
+          <div className="stat-header">
+            <span className="stat-icon blue">T</span>
+            <span>Total Tools</span>
+          </div>
           <strong>{stats.total}</strong>
         </article>
         <article className="stat-card success">
-          <span>Available</span>
+          <div className="stat-header">
+            <span className="stat-icon green">✓</span>
+            <span>Available</span>
+          </div>
           <strong>{stats.available}</strong>
         </article>
         <article className="stat-card warning">
-          <span>For Calibration</span>
+          <div className="stat-header">
+            <span className="stat-icon amber">!</span>
+            <span>For Calibration</span>
+          </div>
           <strong>{stats.checkedOut}</strong>
         </article>
         <article className="stat-card alert">
-          <span>Borrowed</span>
+          <div className="stat-header">
+            <span className="stat-icon red">↗</span>
+            <span>Borrowed</span>
+          </div>
           <strong>{stats.maintenance}</strong>
         </article>
       </section>
@@ -360,12 +370,12 @@ function App() {
               </label>
 
               <label>
-                Location
+                Quantity
                 <input
-                  type="text"
-                  value={form.location}
-                  onChange={(event) => setForm({ ...form, location: event.target.value })}
-                  placeholder="Bay or cart"
+                  type="number"
+                  min="1"
+                  value={form.quantity}
+                  onChange={(event) => setForm({ ...form, quantity: event.target.value })}
                 />
               </label>
             </div>
@@ -415,7 +425,10 @@ function App() {
               </div>
             ) : (
               filteredTools.map((tool) => (
-                <article key={tool.id} className="tool-item">
+                <article
+                  key={tool.id}
+                  className={`tool-item ${tool.status === 'For Calibration' ? 'for-calibration' : ''}`}
+                >
                   <div className="tool-main">
                     <div>
                       <p className="tool-category">{tool.category}</p>
@@ -428,7 +441,6 @@ function App() {
 
                   <div className="tool-meta">
                     <span>Qty: {tool.quantity}</span>
-                    <span>Location: {tool.location}</span>
                     <span>Borrower: {tool.borrower || '—'}</span>
                     <span>Calibration: {tool.calibrationDate || '—'}</span>
                   </div>
@@ -555,15 +567,6 @@ function App() {
                 />
               </label>
             </div>
-
-            <label>
-              Location
-              <input
-                type="text"
-                value={editModal.location}
-                onChange={(event) => setEditModal((current) => ({ ...current, location: event.target.value }))}
-              />
-            </label>
 
             <label>
               Calibration expiry date
