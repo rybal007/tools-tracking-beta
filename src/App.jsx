@@ -4,14 +4,14 @@ import './App.css'
 const STORAGE_KEY = 'tools-tracking-project'
 
 const initialTools = [
-  { id: 1, name: 'Impact Driver', category: 'Power Tools', quantity: 2, status: 'Available', location: 'Bay A1' },
-  { id: 2, name: 'Angle Grinder', category: 'Cutting', quantity: 1, status: 'Checked Out', location: 'Mobile Cart 3' },
-  { id: 3, name: 'Torque Wrench', category: 'Measuring', quantity: 3, status: 'Available', location: 'Tool Room' },
-  { id: 4, name: 'Laser Level', category: 'Measuring', quantity: 1, status: 'Maintenance', location: 'Repair Bench' },
-  { id: 5, name: 'Drill Set', category: 'Power Tools', quantity: 4, status: 'Available', location: 'Bay B2' },
+  { id: 1, name: 'Impact Driver', category: 'Power Tools', quantity: 2, status: 'Available', location: 'Bay A1', borrower: '', calibrationDate: '2026-09-30' },
+  { id: 2, name: 'Angle Grinder', category: 'Cutting', quantity: 1, status: 'For Calibration', location: 'Mobile Cart 3', borrower: '', calibrationDate: '2026-09-01' },
+  { id: 3, name: 'Torque Wrench', category: 'Measuring', quantity: 3, status: 'Available', location: 'Tool Room', borrower: '', calibrationDate: '2026-10-15' },
+  { id: 4, name: 'Laser Level', category: 'Measuring', quantity: 1, status: 'Borrowed', location: 'Repair Bench', borrower: 'A. Gomez', calibrationDate: '2026-09-15' },
+  { id: 5, name: 'Drill Set', category: 'Power Tools', quantity: 4, status: 'Available', location: 'Bay B2', borrower: '', calibrationDate: '2026-11-05' },
 ]
 
-const statusOptions = ['All', 'Available', 'Checked Out', 'Maintenance']
+const statusOptions = ['All', 'Available', 'For Calibration', 'Borrowed']
 
 const emptyForm = {
   name: '',
@@ -19,6 +19,35 @@ const emptyForm = {
   quantity: 1,
   status: 'Available',
   location: '',
+  calibrationDate: '',
+}
+
+const isCalibrationDue = (calibrationDate) => {
+  if (!calibrationDate) {
+    return false
+  }
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const dueDate = new Date(`${calibrationDate}T00:00:00`)
+  return dueDate <= today
+}
+
+const normalizeToolStatus = (tool) => {
+  if (!tool || !tool.calibrationDate || tool.status === 'Borrowed') {
+    return tool
+  }
+
+  if (isCalibrationDue(tool.calibrationDate)) {
+    return {
+      ...tool,
+      status: 'For Calibration',
+      borrower: '',
+    }
+  }
+
+  return tool
 }
 
 function App() {
@@ -33,6 +62,21 @@ function App() {
   const [form, setForm] = useState(emptyForm)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
+  const [assignModal, setAssignModal] = useState({ isOpen: false, toolId: null, borrower: '' })
+  const [calibrationModal, setCalibrationModal] = useState({ isOpen: false, toolId: null, calibrationDate: '' })
+  const [editModal, setEditModal] = useState({
+    isOpen: false,
+    toolId: null,
+    name: '',
+    category: 'Power Tools',
+    quantity: 1,
+    location: '',
+    calibrationDate: '',
+  })
+
+  useEffect(() => {
+    setTools((currentTools) => currentTools.map((tool) => normalizeToolStatus(tool)))
+  }, [])
 
   useEffect(() => {
     try {
@@ -54,8 +98,8 @@ function App() {
     return {
       total: tools.length,
       available: tools.filter((tool) => tool.status === 'Available').length,
-      checkedOut: tools.filter((tool) => tool.status === 'Checked Out').length,
-      maintenance: tools.filter((tool) => tool.status === 'Maintenance').length,
+      checkedOut: tools.filter((tool) => tool.status === 'For Calibration').length,
+      maintenance: tools.filter((tool) => tool.status === 'Borrowed').length,
     }
   }, [tools])
 
@@ -66,14 +110,18 @@ function App() {
       return
     }
 
+    const nextStatus = isCalibrationDue(form.calibrationDate) ? 'For Calibration' : form.status
+
     setTools((currentTools) => [
       {
         id: Date.now(),
         name: form.name.trim(),
         category: form.category,
         quantity: Number(form.quantity) || 1,
-        status: form.status,
+        status: nextStatus,
         location: form.location.trim() || 'Unassigned',
+        calibrationDate: form.calibrationDate || '',
+        borrower: nextStatus === 'Borrowed' ? form.borrower || '' : '',
       },
       ...currentTools,
     ])
@@ -84,9 +132,143 @@ function App() {
   const updateStatus = (id, nextStatus) => {
     setTools((currentTools) =>
       currentTools.map((tool) =>
-        tool.id === id ? { ...tool, status: nextStatus } : tool,
+        tool.id === id
+          ? {
+              ...tool,
+              status: nextStatus,
+              borrower: nextStatus === 'Borrowed' ? tool.borrower || '' : '',
+            }
+          : tool,
       ),
     )
+  }
+
+  const openAssignModal = (tool) => {
+    setAssignModal({ isOpen: true, toolId: tool.id, borrower: tool.borrower || '' })
+  }
+
+  const closeAssignModal = () => {
+    setAssignModal({ isOpen: false, toolId: null, borrower: '' })
+  }
+
+  const confirmAssignment = () => {
+    if (!assignModal.toolId || !assignModal.borrower.trim()) {
+      return
+    }
+
+    setTools((currentTools) =>
+      currentTools.map((tool) =>
+        tool.id === assignModal.toolId
+          ? {
+              ...tool,
+              status: 'Borrowed',
+              borrower: assignModal.borrower.trim(),
+            }
+          : tool,
+      ),
+    )
+
+    closeAssignModal()
+  }
+
+  const returnTool = (id) => {
+    setTools((currentTools) =>
+      currentTools.map((tool) =>
+        tool.id === id
+          ? {
+              ...tool,
+              status: 'Available',
+              borrower: '',
+            }
+          : tool,
+      ),
+    )
+  }
+
+  const openCalibrationModal = (tool) => {
+    setCalibrationModal({ isOpen: true, toolId: tool.id, calibrationDate: tool.calibrationDate || '' })
+  }
+
+  const closeCalibrationModal = () => {
+    setCalibrationModal({ isOpen: false, toolId: null, calibrationDate: '' })
+  }
+
+  const confirmCalibration = () => {
+    if (!calibrationModal.toolId || !calibrationModal.calibrationDate) {
+      return
+    }
+
+    setTools((currentTools) =>
+      currentTools.map((tool) =>
+        tool.id === calibrationModal.toolId
+          ? {
+              ...tool,
+              status: 'Available',
+              borrower: '',
+              calibrationDate: calibrationModal.calibrationDate,
+            }
+          : tool,
+      ),
+    )
+
+    closeCalibrationModal()
+  }
+
+  const openEditModal = (tool) => {
+    setEditModal({
+      isOpen: true,
+      toolId: tool.id,
+      name: tool.name,
+      category: tool.category,
+      quantity: tool.quantity,
+      location: tool.location,
+      calibrationDate: tool.calibrationDate || '',
+    })
+  }
+
+  const closeEditModal = () => {
+    setEditModal({
+      isOpen: false,
+      toolId: null,
+      name: '',
+      category: 'Power Tools',
+      quantity: 1,
+      location: '',
+      calibrationDate: '',
+    })
+  }
+
+  const saveEditedTool = () => {
+    if (!editModal.toolId || !editModal.name.trim()) {
+      return
+    }
+
+    setTools((currentTools) =>
+      currentTools.map((tool) => {
+        if (tool.id !== editModal.toolId) {
+          return tool
+        }
+
+        const nextStatus = isCalibrationDue(editModal.calibrationDate)
+          ? 'For Calibration'
+          : tool.status === 'Borrowed'
+            ? 'Borrowed'
+            : 'Available'
+
+        return {
+          ...tool,
+          name: editModal.name.trim(),
+          category: editModal.category,
+          quantity: Number(editModal.quantity) || 1,
+          location: editModal.location.trim() || 'Unassigned',
+          calibrationDate: editModal.calibrationDate || '',
+          status: nextStatus,
+          borrower: nextStatus === 'Borrowed' ? tool.borrower || '' : '',
+        }
+      }),
+    )
+
+    closeEditModal()
   }
 
   const deleteTool = (id) => {
@@ -115,11 +297,11 @@ function App() {
           <strong>{stats.available}</strong>
         </article>
         <article className="stat-card warning">
-          <span>Checked Out</span>
+          <span>For Calibration</span>
           <strong>{stats.checkedOut}</strong>
         </article>
         <article className="stat-card alert">
-          <span>Maintenance</span>
+          <span>Borrowed</span>
           <strong>{stats.maintenance}</strong>
         </article>
       </section>
@@ -172,8 +354,8 @@ function App() {
                   onChange={(event) => setForm({ ...form, status: event.target.value })}
                 >
                   <option>Available</option>
-                  <option>Checked Out</option>
-                  <option>Maintenance</option>
+                  <option>For Calibration</option>
+                  <option>Borrowed</option>
                 </select>
               </label>
 
@@ -187,6 +369,15 @@ function App() {
                 />
               </label>
             </div>
+
+            <label>
+              Calibration expiry date
+              <input
+                type="date"
+                value={form.calibrationDate}
+                onChange={(event) => setForm({ ...form, calibrationDate: event.target.value })}
+              />
+            </label>
 
             <button type="submit" className="primary-button wide-button">
               Add Tool
@@ -238,20 +429,38 @@ function App() {
                   <div className="tool-meta">
                     <span>Qty: {tool.quantity}</span>
                     <span>Location: {tool.location}</span>
+                    <span>Borrower: {tool.borrower || '—'}</span>
+                    <span>Calibration: {tool.calibrationDate || '—'}</span>
                   </div>
 
                   <div className="tool-actions">
-                    <select
-                      value={tool.status}
-                      onChange={(event) => updateStatus(tool.id, event.target.value)}
-                    >
-                      <option>Available</option>
-                      <option>Checked Out</option>
-                      <option>Maintenance</option>
-                    </select>
-                    <button type="button" className="delete-button" onClick={() => deleteTool(tool.id)}>
-                      Remove
-                    </button>
+                    <div className="action-buttons">
+                      <button type="button" className="edit-button" onClick={() => openEditModal(tool)}>
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="assign-button"
+                        onClick={() => {
+                          if (tool.status === 'For Calibration') {
+                            openCalibrationModal(tool)
+                            return
+                          }
+
+                          if (tool.status === 'Borrowed') {
+                            returnTool(tool.id)
+                            return
+                          }
+
+                          openAssignModal(tool)
+                        }}
+                      >
+                        {tool.status === 'For Calibration' ? 'Calibrate' : tool.status === 'Borrowed' ? 'Return' : 'Assign'}
+                      </button>
+                      <button type="button" className="delete-button" onClick={() => deleteTool(tool.id)}>
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 </article>
               ))
@@ -259,6 +468,123 @@ function App() {
           </div>
         </section>
       </main>
+
+      {assignModal.isOpen && (
+        <div className="modal-backdrop" onClick={closeAssignModal}>
+          <div className="assign-modal" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true">
+            <h3>Assign Borrower</h3>
+            <label>
+              Borrower name
+              <input
+                type="text"
+                value={assignModal.borrower}
+                onChange={(event) => setAssignModal((current) => ({ ...current, borrower: event.target.value }))}
+                placeholder="Enter borrower name"
+              />
+            </label>
+            <div className="modal-actions">
+              <button type="button" className="secondary-button" onClick={closeAssignModal}>
+                Cancel
+              </button>
+              <button type="button" className="primary-button" onClick={confirmAssignment}>
+                Save Assignment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {calibrationModal.isOpen && (
+        <div className="modal-backdrop" onClick={closeCalibrationModal}>
+          <div className="assign-modal" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true">
+            <h3>Set New Calibration Date</h3>
+            <label>
+              Expiry date
+              <input
+                type="date"
+                value={calibrationModal.calibrationDate}
+                onChange={(event) => setCalibrationModal((current) => ({ ...current, calibrationDate: event.target.value }))}
+              />
+            </label>
+            <div className="modal-actions">
+              <button type="button" className="secondary-button" onClick={closeCalibrationModal}>
+                Cancel
+              </button>
+              <button type="button" className="primary-button" onClick={confirmCalibration}>
+                Save Date
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editModal.isOpen && (
+        <div className="modal-backdrop" onClick={closeEditModal}>
+          <div className="assign-modal" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true">
+            <h3>Edit Tool</h3>
+            <label>
+              Tool name
+              <input
+                type="text"
+                value={editModal.name}
+                onChange={(event) => setEditModal((current) => ({ ...current, name: event.target.value }))}
+              />
+            </label>
+            <div className="two-column">
+              <label>
+                Category
+                <select
+                  value={editModal.category}
+                  onChange={(event) => setEditModal((current) => ({ ...current, category: event.target.value }))}
+                >
+                  <option>Power Tools</option>
+                  <option>Cutting</option>
+                  <option>Measuring</option>
+                  <option>Fastening</option>
+                  <option>Safety</option>
+                </select>
+              </label>
+
+              <label>
+                Quantity
+                <input
+                  type="number"
+                  min="1"
+                  value={editModal.quantity}
+                  onChange={(event) => setEditModal((current) => ({ ...current, quantity: Number(event.target.value) || 1 }))}
+                />
+              </label>
+            </div>
+
+            <label>
+              Location
+              <input
+                type="text"
+                value={editModal.location}
+                onChange={(event) => setEditModal((current) => ({ ...current, location: event.target.value }))}
+              />
+            </label>
+
+            <label>
+              Calibration expiry date
+              <input
+                type="date"
+                value={editModal.calibrationDate}
+                onChange={(event) => setEditModal((current) => ({ ...current, calibrationDate: event.target.value }))}
+              />
+            </label>
+
+            <div className="modal-actions">
+              <button type="button" className="secondary-button" onClick={closeEditModal}>
+                Cancel
+              </button>
+              <button type="button" className="primary-button" onClick={saveEditedTool}>
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
