@@ -4,19 +4,18 @@ import './App.css'
 const STORAGE_KEY = 'tools-tracking-project'
 
 const initialTools = [
-  { id: 1, name: 'Impact Driver', category: 'Power Tools', quantity: 2, status: 'Available', borrower: '', calibrationDate: '2026-09-30' },
-  { id: 2, name: 'Angle Grinder', category: 'Cutting', quantity: 1, status: 'For Calibration', borrower: '', calibrationDate: '2026-09-01' },
-  { id: 3, name: 'Torque Wrench', category: 'Measuring', quantity: 3, status: 'Available', borrower: '', calibrationDate: '2026-10-15' },
-  { id: 4, name: 'Laser Level', category: 'Measuring', quantity: 1, status: 'Borrowed', borrower: 'A. Gomez', calibrationDate: '2026-09-15' },
-  { id: 5, name: 'Drill Set', category: 'Power Tools', quantity: 4, status: 'Available', borrower: '', calibrationDate: '2026-11-05' },
+  { id: 1, name: 'Impact Driver', quantity: 2, serialNumber: 'IMD-2048', status: 'Available', borrower: '', calibrationDate: '2026-09-30' },
+  { id: 2, name: 'Angle Grinder', quantity: 1, serialNumber: 'ANG-1187', status: 'For Calibration', borrower: '', calibrationDate: '2026-09-01' },
+  { id: 3, name: 'Torque Wrench', quantity: 3, serialNumber: 'TWR-4430', status: 'Available', borrower: '', calibrationDate: '2026-10-15' },
+  { id: 4, name: 'Laser Level', quantity: 1, serialNumber: 'LLV-8125', status: 'Borrowed', borrower: 'A. Gomez', calibrationDate: '2026-09-15' },
+  { id: 5, name: 'Drill Set', quantity: 4, serialNumber: 'DRL-5521', status: 'Available', borrower: '', calibrationDate: '2026-11-05' },
 ]
 
 const statusOptions = ['All', 'Available', 'For Calibration', 'Borrowed']
 
 const emptyForm = {
   name: '',
-  category: 'Power Tools',
-  quantity: 1,
+  serialNumber: '',
   status: 'Available',
   calibrationDate: '',
 }
@@ -67,8 +66,7 @@ function App() {
     isOpen: false,
     toolId: null,
     name: '',
-    category: 'Power Tools',
-    quantity: 1,
+    serialNumber: '',
     calibrationDate: '',
   })
 
@@ -114,8 +112,7 @@ function App() {
       {
         id: Date.now(),
         name: form.name.trim(),
-        category: form.category,
-        quantity: Number(form.quantity) || 1,
+        serialNumber: form.serialNumber.trim(),
         status: nextStatus,
         calibrationDate: form.calibrationDate || '',
         borrower: nextStatus === 'Borrowed' ? form.borrower || '' : '',
@@ -216,8 +213,7 @@ function App() {
       isOpen: true,
       toolId: tool.id,
       name: tool.name,
-      category: tool.category,
-      quantity: tool.quantity,
+      serialNumber: tool.serialNumber || '',
       calibrationDate: tool.calibrationDate || '',
     })
   }
@@ -227,8 +223,7 @@ function App() {
       isOpen: false,
       toolId: null,
       name: '',
-      category: 'Power Tools',
-      quantity: 1,
+      serialNumber: '',
       calibrationDate: '',
     })
   }
@@ -253,8 +248,7 @@ function App() {
         return {
           ...tool,
           name: editModal.name.trim(),
-          category: editModal.category,
-          quantity: Number(editModal.quantity) || 1,
+          serialNumber: editModal.serialNumber.trim(),
           calibrationDate: editModal.calibrationDate || '',
           status: nextStatus,
           borrower: nextStatus === 'Borrowed' ? tool.borrower || '' : '',
@@ -330,31 +324,15 @@ function App() {
               />
             </label>
 
-            <div className="two-column">
-              <label>
-                Category
-                <select
-                  value={form.category}
-                  onChange={(event) => setForm({ ...form, category: event.target.value })}
-                >
-                  <option>Power Tools</option>
-                  <option>Cutting</option>
-                  <option>Measuring</option>
-                  <option>Fastening</option>
-                  <option>Safety</option>
-                </select>
-              </label>
-
-              <label>
-                Quantity
-                <input
-                  type="number"
-                  min="1"
-                  value={form.quantity}
-                  onChange={(event) => setForm({ ...form, quantity: event.target.value })}
-                />
-              </label>
-            </div>
+            <label>
+              Serial number
+              <input
+                type="text"
+                value={form.serialNumber}
+                onChange={(event) => setForm({ ...form, serialNumber: event.target.value })}
+                placeholder="e.g. IMD-2048"
+              />
+            </label>
 
             <div className="two-column">
               <label>
@@ -431,7 +409,6 @@ function App() {
                 >
                   <div className="tool-main">
                     <div>
-                      <p className="tool-category">{tool.category}</p>
                       <h3>{tool.name}</h3>
                     </div>
                     <span className={`status-badge ${tool.status.toLowerCase().replace(/\s+/g, '-')}`}>
@@ -440,7 +417,7 @@ function App() {
                   </div>
 
                   <div className="tool-meta">
-                    <span>Qty: {tool.quantity}</span>
+                    <span>Serial: {tool.serialNumber || '—'}</span>
                     <span>Borrower: {tool.borrower || '—'}</span>
                     <span>Calibration: {tool.calibrationDate || '—'}</span>
                   </div>
@@ -542,31 +519,14 @@ function App() {
                 onChange={(event) => setEditModal((current) => ({ ...current, name: event.target.value }))}
               />
             </label>
-            <div className="two-column">
-              <label>
-                Category
-                <select
-                  value={editModal.category}
-                  onChange={(event) => setEditModal((current) => ({ ...current, category: event.target.value }))}
-                >
-                  <option>Power Tools</option>
-                  <option>Cutting</option>
-                  <option>Measuring</option>
-                  <option>Fastening</option>
-                  <option>Safety</option>
-                </select>
-              </label>
-
-              <label>
-                Quantity
-                <input
-                  type="number"
-                  min="1"
-                  value={editModal.quantity}
-                  onChange={(event) => setEditModal((current) => ({ ...current, quantity: Number(event.target.value) || 1 }))}
-                />
-              </label>
-            </div>
+            <label>
+              Serial number
+              <input
+                type="text"
+                value={editModal.serialNumber}
+                onChange={(event) => setEditModal((current) => ({ ...current, serialNumber: event.target.value }))}
+              />
+            </label>
 
             <label>
               Calibration expiry date
