@@ -4,14 +4,30 @@ import './App.css'
 const STORAGE_KEY = 'tools-tracking-project'
 
 const initialTools = [
-  { id: 1, name: 'Impact Driver', quantity: 2, serialNumber: 'IMD-2048', status: 'Available', borrower: '', calibrationDate: '2026-09-30' },
-  { id: 2, name: 'Angle Grinder', quantity: 1, serialNumber: 'ANG-1187', status: 'For Calibration', borrower: '', calibrationDate: '2026-09-01' },
-  { id: 3, name: 'Torque Wrench', quantity: 3, serialNumber: 'TWR-4430', status: 'Available', borrower: '', calibrationDate: '2026-10-15' },
-  { id: 4, name: 'Laser Level', quantity: 1, serialNumber: 'LLV-8125', status: 'Borrowed', borrower: 'A. Gomez', calibrationDate: '2026-09-15' },
-  { id: 5, name: 'Drill Set', quantity: 4, serialNumber: 'DRL-5521', status: 'Available', borrower: '', calibrationDate: '2026-11-05' },
+  { id: 1, name: 'Impact Driver', quantity: 2, serialNumber: 'IMD-2048', status: 'Available', borrower: '', calibrationDate: '2026-09-30', assignedAt: '', returnedAt: '' },
+  { id: 2, name: 'Angle Grinder', quantity: 1, serialNumber: 'ANG-1187', status: 'For Calibration', borrower: '', calibrationDate: '2026-09-01', assignedAt: '', returnedAt: '' },
+  { id: 3, name: 'Torque Wrench', quantity: 3, serialNumber: 'TWR-4430', status: 'Available', borrower: '', calibrationDate: '2026-10-15', assignedAt: '', returnedAt: '' },
+  { id: 4, name: 'Laser Level', quantity: 1, serialNumber: 'LLV-8125', status: 'Borrowed', borrower: 'A. Gomez', calibrationDate: '2026-09-15', assignedAt: '2026-09-09T10:30:00', returnedAt: '' },
+  { id: 5, name: 'Drill Set', quantity: 4, serialNumber: 'DRL-5521', status: 'Available', borrower: '', calibrationDate: '2026-11-05', assignedAt: '', returnedAt: '' },
 ]
 
 const statusOptions = ['All', 'Available', 'For Calibration', 'Borrowed']
+
+const formatDateTime = (value) => {
+  if (!value) {
+    return '—'
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(date)
+}
 
 const emptyForm = {
   name: '',
@@ -116,6 +132,8 @@ function App() {
         status: nextStatus,
         calibrationDate: form.calibrationDate || '',
         borrower: nextStatus === 'Borrowed' ? form.borrower || '' : '',
+        assignedAt: nextStatus === 'Borrowed' ? new Date().toISOString() : '',
+        returnedAt: nextStatus === 'Borrowed' ? '' : '',
       },
       ...currentTools,
     ])
@@ -131,6 +149,8 @@ function App() {
               ...tool,
               status: nextStatus,
               borrower: nextStatus === 'Borrowed' ? tool.borrower || '' : '',
+              assignedAt: nextStatus === 'Borrowed' ? tool.assignedAt || new Date().toISOString() : tool.assignedAt,
+              returnedAt: nextStatus === 'Borrowed' ? '' : new Date().toISOString(),
             }
           : tool,
       ),
@@ -150,6 +170,8 @@ function App() {
       return
     }
 
+    const now = new Date().toISOString()
+
     setTools((currentTools) =>
       currentTools.map((tool) =>
         tool.id === assignModal.toolId
@@ -157,6 +179,8 @@ function App() {
               ...tool,
               status: 'Borrowed',
               borrower: assignModal.borrower.trim(),
+              assignedAt: now,
+              returnedAt: '',
             }
           : tool,
       ),
@@ -166,6 +190,8 @@ function App() {
   }
 
   const returnTool = (id) => {
+    const now = new Date().toISOString()
+
     setTools((currentTools) =>
       currentTools.map((tool) =>
         tool.id === id
@@ -173,6 +199,7 @@ function App() {
               ...tool,
               status: 'Available',
               borrower: '',
+              returnedAt: now,
             }
           : tool,
       ),
@@ -192,6 +219,8 @@ function App() {
       return
     }
 
+    const now = new Date().toISOString()
+
     setTools((currentTools) =>
       currentTools.map((tool) =>
         tool.id === calibrationModal.toolId
@@ -200,6 +229,7 @@ function App() {
               status: 'Available',
               borrower: '',
               calibrationDate: calibrationModal.calibrationDate,
+              returnedAt: now,
             }
           : tool,
       ),
@@ -245,6 +275,8 @@ function App() {
             ? 'Borrowed'
             : 'Available'
 
+        const now = new Date().toISOString()
+
         return {
           ...tool,
           name: editModal.name.trim(),
@@ -252,6 +284,8 @@ function App() {
           calibrationDate: editModal.calibrationDate || '',
           status: nextStatus,
           borrower: nextStatus === 'Borrowed' ? tool.borrower || '' : '',
+          assignedAt: nextStatus === 'Borrowed' ? tool.assignedAt || now : tool.assignedAt,
+          returnedAt: nextStatus === 'Borrowed' ? '' : now,
         }
       }),
     )
@@ -263,18 +297,48 @@ function App() {
     setTools((currentTools) => currentTools.filter((tool) => tool.id !== id))
   }
 
+  const exportToExcel = () => {
+    const rows = filteredTools.length > 0 ? filteredTools : tools
+
+    const header = ['Name', 'Quantity', 'Serial Number', 'Status', 'Borrower', 'Expiry Date']
+    const csvRows = rows.map((tool) => [
+      tool.name,
+      tool.quantity ?? 1,
+      tool.serialNumber || '',
+      tool.status,
+      tool.borrower || '',
+      tool.calibrationDate || '',
+    ])
+
+    const csvContent = [header, ...csvRows]
+      .map((row) =>
+        row
+          .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+          .join(','),
+      )
+      .join('\n')
+
+    const blob = new Blob([csvContent], { type: 'application/vnd.ms-excel;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'tools-export.csv'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
         <div className="title-block">
-          <span className="header-pill">Live inventory</span>
           <p className="eyebrow">Operations dashboard</p>
           <h1>Tools Tracking</h1>
         </div>
         <div className="topbar-actions">
-          <span className="mini-indicator">Updated now</span>
-          <button type="button" className="primary-button">
-            Sync Inventory
+          <button type="button" className="secondary-button" onClick={exportToExcel}>
+            Export Excel
           </button>
         </div>
       </header>
@@ -334,29 +398,17 @@ function App() {
               />
             </label>
 
-            <div className="two-column">
-              <label>
-                Status
-                <select
-                  value={form.status}
-                  onChange={(event) => setForm({ ...form, status: event.target.value })}
-                >
-                  <option>Available</option>
-                  <option>For Calibration</option>
-                  <option>Borrowed</option>
-                </select>
-              </label>
-
-              <label>
-                Quantity
-                <input
-                  type="number"
-                  min="1"
-                  value={form.quantity}
-                  onChange={(event) => setForm({ ...form, quantity: event.target.value })}
-                />
-              </label>
-            </div>
+            <label>
+              Status
+              <select
+                value={form.status}
+                onChange={(event) => setForm({ ...form, status: event.target.value })}
+              >
+                <option>Available</option>
+                <option>For Calibration</option>
+                <option>Borrowed</option>
+              </select>
+            </label>
 
             <label>
               Calibration expiry date
@@ -408,7 +460,8 @@ function App() {
                   className={`tool-item ${tool.status === 'For Calibration' ? 'for-calibration' : ''}`}
                 >
                   <div className="tool-main">
-                    <div>
+                    <div className="tool-title-group">
+                      {tool.status === 'For Calibration' && <span className="tool-warning-icon">⚠</span>}
                       <h3>{tool.name}</h3>
                     </div>
                     <span className={`status-badge ${tool.status.toLowerCase().replace(/\s+/g, '-')}`}>
@@ -419,7 +472,9 @@ function App() {
                   <div className="tool-meta">
                     <span>Serial: {tool.serialNumber || '—'}</span>
                     <span>Borrower: {tool.borrower || '—'}</span>
-                    <span>Calibration: {tool.calibrationDate || '—'}</span>
+                    <span>Assigned: {formatDateTime(tool.assignedAt)}</span>
+                    <span>Returned: {formatDateTime(tool.returnedAt)}</span>
+                    <span>Expiry: {tool.calibrationDate || '—'}</span>
                   </div>
 
                   <div className="tool-actions">
