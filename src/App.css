@@ -196,8 +196,47 @@
 }
 
 .panel h2 {
-  margin: 0 0 18px;
+  margin: 0;
   font-size: 1.4rem;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.panel-toggle {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.panel-toggle:hover {
+  border-color: rgba(96, 165, 250, 0.6);
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.1);
+}
+
+.panel-toggle-icon {
+  display: inline-block;
+  font-size: 1.1rem;
+  line-height: 1;
+  transform: rotate(180deg);
+  transition: transform 0.2s ease;
+}
+
+.panel-toggle.is-open .panel-toggle-icon {
+  transform: rotate(0deg);
 }
 
 .tool-form {

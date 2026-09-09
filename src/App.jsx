@@ -76,6 +76,7 @@ function App() {
   const [form, setForm] = useState(emptyForm)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
+  const [isAddToolOpen, setIsAddToolOpen] = useState(true)
   const [assignModal, setAssignModal] = useState({ isOpen: false, toolId: null, borrower: '' })
   const [calibrationModal, setCalibrationModal] = useState({ isOpen: false, toolId: null, calibrationDate: '' })
   const [editModal, setEditModal] = useState({
@@ -376,53 +377,67 @@ function App() {
 
       <main className="content-grid">
         <aside className="panel form-panel">
-          <h2>Add Tool</h2>
-          <form onSubmit={handleSubmit} className="tool-form">
-            <label>
-              Tool name
-              <input
-                type="text"
-                value={form.name}
-                onChange={(event) => setForm({ ...form, name: event.target.value })}
-                placeholder="Example: Circular Saw"
-              />
-            </label>
-
-            <label>
-              Serial number
-              <input
-                type="text"
-                value={form.serialNumber}
-                onChange={(event) => setForm({ ...form, serialNumber: event.target.value })}
-                placeholder="e.g. IMD-2048"
-              />
-            </label>
-
-            <label>
-              Status
-              <select
-                value={form.status}
-                onChange={(event) => setForm({ ...form, status: event.target.value })}
-              >
-                <option>Available</option>
-                <option>For Calibration</option>
-                <option>Borrowed</option>
-              </select>
-            </label>
-
-            <label>
-              Calibration expiry date
-              <input
-                type="date"
-                value={form.calibrationDate}
-                onChange={(event) => setForm({ ...form, calibrationDate: event.target.value })}
-              />
-            </label>
-
-            <button type="submit" className="primary-button wide-button">
-              Add Tool
+          <div className="panel-header">
+            <h2>Add Tool</h2>
+            <button
+              type="button"
+              className={`panel-toggle ${isAddToolOpen ? 'is-open' : ''}`}
+              aria-expanded={isAddToolOpen}
+              aria-label={isAddToolOpen ? 'Collapse Add Tool form' : 'Expand Add Tool form'}
+              onClick={() => setIsAddToolOpen((current) => !current)}
+            >
+              <span className="panel-toggle-icon">⌃</span>
             </button>
-          </form>
+          </div>
+
+          {isAddToolOpen && (
+            <form onSubmit={handleSubmit} className="tool-form">
+              <label>
+                Tool name
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(event) => setForm({ ...form, name: event.target.value })}
+                  placeholder="Example: Circular Saw"
+                />
+              </label>
+
+              <label>
+                Serial number
+                <input
+                  type="text"
+                  value={form.serialNumber}
+                  onChange={(event) => setForm({ ...form, serialNumber: event.target.value })}
+                  placeholder="e.g. IMD-2048"
+                />
+              </label>
+
+              <label>
+                Status
+                <select
+                  value={form.status}
+                  onChange={(event) => setForm({ ...form, status: event.target.value })}
+                >
+                  <option>Available</option>
+                  <option>For Calibration</option>
+                  <option>Borrowed</option>
+                </select>
+              </label>
+
+              <label>
+                Calibration expiry date
+                <input
+                  type="date"
+                  value={form.calibrationDate}
+                  onChange={(event) => setForm({ ...form, calibrationDate: event.target.value })}
+                />
+              </label>
+
+              <button type="submit" className="primary-button wide-button">
+                Add Tool
+              </button>
+            </form>
+          )}
         </aside>
 
         <section className="panel list-panel">
