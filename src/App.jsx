@@ -4,11 +4,11 @@ import './App.css'
 const STORAGE_KEY = 'tools-tracking-project'
 
 const initialTools = [
-  { id: 1, name: 'Impact Driver', quantity: 2, serialNumber: 'IMD-2048', status: 'Available', borrower: '', calibrationDate: '2026-09-30', assignedAt: '', returnedAt: '' },
-  { id: 2, name: 'Angle Grinder', quantity: 1, serialNumber: 'ANG-1187', status: 'For Calibration', borrower: '', calibrationDate: '2026-09-01', assignedAt: '', returnedAt: '' },
-  { id: 3, name: 'Torque Wrench', quantity: 3, serialNumber: 'TWR-4430', status: 'Available', borrower: '', calibrationDate: '2026-10-15', assignedAt: '', returnedAt: '' },
-  { id: 4, name: 'Laser Level', quantity: 1, serialNumber: 'LLV-8125', status: 'Borrowed', borrower: 'A. Gomez', calibrationDate: '2026-09-15', assignedAt: '2026-09-09T10:30:00', returnedAt: '' },
-  { id: 5, name: 'Drill Set', quantity: 4, serialNumber: 'DRL-5521', status: 'Available', borrower: '', calibrationDate: '2026-11-05', assignedAt: '', returnedAt: '' },
+  { id: 1, name: 'Impact Driver', quantity: 2, serialNumber: 'IMD-2048', status: 'Available', borrower: '', calibrationDate: '2026-09-30', assignedAt: '', returnedAt: '', image: 'https://images.unsplash.com/photo-1581147036324-c17ac5e7d7cd?auto=format&fit=crop&w=800&q=80' },
+  { id: 2, name: 'Angle Grinder', quantity: 1, serialNumber: 'ANG-1187', status: 'For Calibration', borrower: '', calibrationDate: '2026-09-01', assignedAt: '', returnedAt: '', image: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80' },
+  { id: 3, name: 'Torque Wrench', quantity: 3, serialNumber: 'TWR-4430', status: 'Available', borrower: '', calibrationDate: '2026-10-15', assignedAt: '', returnedAt: '', image: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?auto=format&fit=crop&w=800&q=80' },
+  { id: 4, name: 'Laser Level', quantity: 1, serialNumber: 'LLV-8125', status: 'Borrowed', borrower: 'A. Gomez', calibrationDate: '2026-09-15', assignedAt: '2026-09-09T10:30:00', returnedAt: '', image: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=800&q=80' },
+  { id: 5, name: 'Drill Set', quantity: 4, serialNumber: 'DRL-5521', status: 'Available', borrower: '', calibrationDate: '2026-11-05', assignedAt: '', returnedAt: '', image: 'https://images.unsplash.com/photo-1530124566582-a618962fc9d5?auto=format&fit=crop&w=800&q=80' },
 ]
 
 const statusOptions = ['All', 'Available', 'For Calibration', 'Borrowed']
@@ -34,7 +34,16 @@ const emptyForm = {
   serialNumber: '',
   status: 'Available',
   calibrationDate: '',
+  image: '',
 }
+
+const fileToDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = () => reject(new Error('Unable to read file'))
+    reader.readAsDataURL(file)
+  })
 
 const isCalibrationDue = (calibrationDate) => {
   if (!calibrationDate) {
@@ -85,6 +94,7 @@ function App() {
     name: '',
     serialNumber: '',
     calibrationDate: '',
+    image: '',
   })
 
   useEffect(() => {
@@ -135,6 +145,7 @@ function App() {
         borrower: nextStatus === 'Borrowed' ? form.borrower || '' : '',
         assignedAt: nextStatus === 'Borrowed' ? new Date().toISOString() : '',
         returnedAt: nextStatus === 'Borrowed' ? '' : '',
+        image: form.image.trim() || '',
       },
       ...currentTools,
     ])
@@ -246,6 +257,7 @@ function App() {
       name: tool.name,
       serialNumber: tool.serialNumber || '',
       calibrationDate: tool.calibrationDate || '',
+      image: tool.image || '',
     })
   }
 
@@ -256,6 +268,7 @@ function App() {
       name: '',
       serialNumber: '',
       calibrationDate: '',
+      image: '',
     })
   }
 
@@ -283,6 +296,7 @@ function App() {
           name: editModal.name.trim(),
           serialNumber: editModal.serialNumber.trim(),
           calibrationDate: editModal.calibrationDate || '',
+          image: editModal.image.trim() || tool.image || '',
           status: nextStatus,
           borrower: nextStatus === 'Borrowed' ? tool.borrower || '' : '',
           assignedAt: nextStatus === 'Borrowed' ? tool.assignedAt || now : tool.assignedAt,
@@ -433,6 +447,43 @@ function App() {
                 />
               </label>
 
+              <label>
+                Upload image
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0]
+                    if (!file) {
+                      return
+                    }
+
+                    try {
+                      const dataUrl = await fileToDataUrl(file)
+                      setForm((current) => ({ ...current, image: dataUrl }))
+                    } catch {
+                      setForm((current) => ({ ...current, image: '' }))
+                    }
+                  }}
+                />
+              </label>
+
+              {form.image && (
+                <div className="image-preview-box">
+                  <img src={form.image} alt="Tool preview" className="image-preview" />
+                </div>
+              )}
+
+              <label>
+                Or use image URL
+                <input
+                  type="url"
+                  value={form.image}
+                  onChange={(event) => setForm({ ...form, image: event.target.value })}
+                  placeholder="https://example.com/tool-image.jpg"
+                />
+              </label>
+
               <button type="submit" className="primary-button wide-button">
                 Add Tool
               </button>
@@ -474,6 +525,14 @@ function App() {
                   key={tool.id}
                   className={`tool-item ${tool.status === 'For Calibration' ? 'for-calibration' : ''}`}
                 >
+                  <div className="tool-visual">
+                    {tool.image ? (
+                      <img src={tool.image} alt={tool.name} className="tool-image" />
+                    ) : (
+                      <div className="tool-image-placeholder">🛠️</div>
+                    )}
+                  </div>
+
                   <div className="tool-main">
                     <div className="tool-title-group">
                       {tool.status === 'For Calibration' && <span className="tool-warning-icon">⚠</span>}
@@ -517,7 +576,7 @@ function App() {
                         {tool.status === 'For Calibration' ? 'Calibrate' : tool.status === 'Borrowed' ? 'Return' : 'Assign'}
                       </button>
                       <button type="button" className="delete-button" onClick={() => deleteTool(tool.id)}>
-                        Remove
+                        DEL
                       </button>
                     </div>
                   </div>
@@ -604,6 +663,43 @@ function App() {
                 type="date"
                 value={editModal.calibrationDate}
                 onChange={(event) => setEditModal((current) => ({ ...current, calibrationDate: event.target.value }))}
+              />
+            </label>
+
+            <label>
+              Upload image
+              <input
+                type="file"
+                accept="image/*"
+                onChange={async (event) => {
+                  const file = event.target.files?.[0]
+                  if (!file) {
+                    return
+                  }
+
+                  try {
+                    const dataUrl = await fileToDataUrl(file)
+                    setEditModal((current) => ({ ...current, image: dataUrl }))
+                  } catch {
+                    setEditModal((current) => ({ ...current, image: '' }))
+                  }
+                }}
+              />
+            </label>
+
+            {editModal.image && (
+              <div className="image-preview-box">
+                <img src={editModal.image} alt="Tool preview" className="image-preview" />
+              </div>
+            )}
+
+            <label>
+              Or use image URL
+              <input
+                type="url"
+                value={editModal.image}
+                onChange={(event) => setEditModal((current) => ({ ...current, image: event.target.value }))}
+                placeholder="https://example.com/tool-image.jpg"
               />
             </label>
 
