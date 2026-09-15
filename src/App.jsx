@@ -13,6 +13,7 @@ const initialTools = [
 
 const statusOptions = ['All', 'Available', 'For Calibration', 'Borrowed']
 
+// Formats ISO timestamps into a readable short date/time string for the UI.
 const formatDateTime = (value) => {
   if (!value) {
     return '—'
@@ -37,6 +38,7 @@ const emptyForm = {
   image: '',
 }
 
+// Converts a selected local image file into a base64 data URL so it can be stored and displayed.
 const fileToDataUrl = (file) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -45,6 +47,7 @@ const fileToDataUrl = (file) =>
     reader.readAsDataURL(file)
   })
 
+// Checks whether a calibration date has passed today, marking the item as needing calibration.
 const isCalibrationDue = (calibrationDate) => {
   if (!calibrationDate) {
     return false
@@ -57,6 +60,7 @@ const isCalibrationDue = (calibrationDate) => {
   return dueDate <= today
 }
 
+// Ensures any expired calibration date automatically changes a tool to the calibration status.
 const normalizeToolStatus = (tool) => {
   if (!tool || !tool.calibrationDate || tool.status === 'Borrowed') {
     return tool
@@ -74,6 +78,7 @@ const normalizeToolStatus = (tool) => {
 }
 
 function App() {
+  // Reads saved tools from localStorage so the inventory still exists after a refresh.
   const [tools, setTools] = useState(() => {
     try {
       const savedTools = localStorage.getItem(STORAGE_KEY)
@@ -97,10 +102,12 @@ function App() {
     image: '',
   })
 
+  // On first load, re-check each tool so expired calibration dates are updated automatically.
   useEffect(() => {
     setTools((currentTools) => currentTools.map((tool) => normalizeToolStatus(tool)))
   }, [])
 
+  // Persists the tool list in localStorage every time the inventory changes.
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(tools))
@@ -109,6 +116,7 @@ function App() {
     }
   }, [tools])
 
+  // Filters the cart by search text and selected status so the dashboard only shows matching tools.
   const filteredTools = useMemo(() => {
     return tools.filter((tool) => {
       const matchesSearch = tool.name.toLowerCase().includes(search.toLowerCase())
@@ -117,6 +125,7 @@ function App() {
     })
   }, [search, statusFilter, tools])
 
+  // Calculates the dashboard counters for total, available, calibration, and borrowed tools.
   const stats = useMemo(() => {
     return {
       total: tools.length,
@@ -126,6 +135,7 @@ function App() {
     }
   }, [tools])
 
+  // Adds a new tool to the inventory and auto-sets the calibration state if the date is already due.
   const handleSubmit = (event) => {
     event.preventDefault()
 
@@ -153,6 +163,7 @@ function App() {
     setForm(emptyForm)
   }
 
+  // Updates a tool's status without changing the rest of its properties.
   const updateStatus = (id, nextStatus) => {
     setTools((currentTools) =>
       currentTools.map((tool) =>
@@ -169,6 +180,7 @@ function App() {
     )
   }
 
+  // Opens the borrower entry dialog for the selected tool.
   const openAssignModal = (tool) => {
     setAssignModal({ isOpen: true, toolId: tool.id, borrower: tool.borrower || '' })
   }
@@ -177,6 +189,7 @@ function App() {
     setAssignModal({ isOpen: false, toolId: null, borrower: '' })
   }
 
+  // Saves the borrower name and marks the tool as borrowed with the current timestamp.
   const confirmAssignment = () => {
     if (!assignModal.toolId || !assignModal.borrower.trim()) {
       return
@@ -201,6 +214,7 @@ function App() {
     closeAssignModal()
   }
 
+  // Returns a borrowed tool to stock and clears the borrower information.
   const returnTool = (id) => {
     const now = new Date().toISOString()
 
@@ -218,6 +232,7 @@ function App() {
     )
   }
 
+  // Opens the calibration date modal for the selected tool.
   const openCalibrationModal = (tool) => {
     setCalibrationModal({ isOpen: true, toolId: tool.id, calibrationDate: tool.calibrationDate || '' })
   }
@@ -226,6 +241,7 @@ function App() {
     setCalibrationModal({ isOpen: false, toolId: null, calibrationDate: '' })
   }
 
+  // Updates the calibration date and clears the current borrower when a tool is re-certified.
   const confirmCalibration = () => {
     if (!calibrationModal.toolId || !calibrationModal.calibrationDate) {
       return
@@ -250,6 +266,7 @@ function App() {
     closeCalibrationModal()
   }
 
+  // Populates the edit modal with the selected tool's current details for modification.
   const openEditModal = (tool) => {
     setEditModal({
       isOpen: true,
@@ -272,6 +289,7 @@ function App() {
     })
   }
 
+  // Saves the edited tool details and preserves the correct status logic after changes.
   const saveEditedTool = () => {
     if (!editModal.toolId || !editModal.name.trim()) {
       return
@@ -308,20 +326,24 @@ function App() {
     closeEditModal()
   }
 
+  // Removes a tool from the inventory list completely.
   const deleteTool = (id) => {
     setTools((currentTools) => currentTools.filter((tool) => tool.id !== id))
   }
 
+  // Builds a CSV file from the visible tools so it can be opened in Excel.
   const exportToExcel = () => {
     const rows = filteredTools.length > 0 ? filteredTools : tools
 
-    const header = ['Name', 'Quantity', 'Serial Number', 'Status', 'Borrower', 'Expiry Date']
+    const header = ['Name', 'Quantity', 'Serial Number', 'Status', 'Borrower', 'Assigned At', 'Returned At', 'Expiry Date']
     const csvRows = rows.map((tool) => [
       tool.name,
       tool.quantity ?? 1,
       tool.serialNumber || '',
       tool.status,
       tool.borrower || '',
+      tool.assignedAt || '',
+      tool.returnedAt || '',
       tool.calibrationDate || '',
     ])
 
